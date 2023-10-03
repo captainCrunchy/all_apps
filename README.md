@@ -1,7 +1,7 @@
 # all_apps
 ## Release History
-### < none >
-< none >
+### 10/03/2023
+Added C and C++ programs
 
 ## C programs
 ### hello
