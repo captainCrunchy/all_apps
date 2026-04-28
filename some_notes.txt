@@ -32,3 +32,12 @@ Its fleece was white as snow
 And everywhere that Mary went
 The lamb was sure to go
 
+Here’s a clear outline you can build step by step with just NumPy:
+1.  Tokenization — Split text into characters or words, build a vocabulary, and convert text to numbers.
+2.  Embeddings — Create a simple lookup table that turns each token into a small vector.
+3.  Positional Encoding — Add vectors that tell the model the position of each token.
+4.  Multi-Head Attention — Code the core attention formula: Q × K^T, softmax, and multiply by V.
+5.  Feed-Forward Network — Build a small two-layer network with ReLU between them.
+6.  Transformer Block — Stack attention + feed-forward with layer normalization.
+7.  Full Model — Stack a few blocks, add a final linear layer to predict the next token.
+8.  Training Loop — Use cross-entropy loss and basic gradient descent.
