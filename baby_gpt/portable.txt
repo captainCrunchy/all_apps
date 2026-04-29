@@ -1,1 +1,16 @@
-Portable content
+with open('training_data.txt', 'r', encoding='utf-8') as f:
+    text = f.read()
+
+print("Total characters:", len(text))
+print("Vocabulary size:", len(sorted(list(set(text)))))
+
+# Create character to integer mapping
+chars = sorted(list(set(text)))
+stoi = {ch: i for i, ch in enumerate(chars)}
+itos = {i: ch for i, ch in enumerate(chars)}
+
+# Test encoding
+sample = text[:50]
+encoded = for ch in sample]
+print("First 50 characters encoded:", encoded[:20])
+print("Decoded back:", ''.join( for i in encoded[:20]))
