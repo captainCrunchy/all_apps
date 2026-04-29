@@ -1,17 +1,14 @@
-with open('training_data.txt', 'r', encoding='utf-8') as f:
-    text = f.read()
+import numpy as np
 
-chars = sorted(list(set(text)))
-stoi = {ch: i for i, ch in enumerate(chars)}
-itos = {i: ch for i, ch in enumerate(chars)}
+# Hyperparameters
+vocab_size = len(chars)
+embedding_dim = 32   # We're keeping it small on purpose
 
-encode = lambda s: for c in s]
-decode = lambda l: ''.join( for i in l])
+# Create embedding matrix (random initialization)
+np.random.seed(42)
+embeddings = np.random.randn(vocab_size, embedding_dim).astype(np.float32)
 
-print("Total characters:", len(text))
-print("Vocabulary size:", len(chars))
+print("Embedding matrix shape:", embeddings.shape)
 
-sample = text[:50]
-print("Sample text:", sample)
-print("Encoded:", encode(sample))
-print("Decoded back:", decode(encode(sample)))
+# Let's see what one character looks like
+char_index = stoi print("Embedding vector for 't':", embeddings [:8])
