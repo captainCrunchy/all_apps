@@ -6,22 +6,20 @@ from pathlib import Path
 # ====================== CONFIG ======================
 class Config:
     def __init__(self):
-        self.batch_size = 32
-        self.block_size = 256          # context length
-        self.n_embd = 320              # embedding size
+        self.batch_size = 64
+        self.block_size = 256
+        self.n_embd = 384
         self.n_head = 8
         self.n_layer = 8
-        self.dropout = 0.1
-        self.learning_rate = 6e-4
-        self.max_iters = 8000
-        self.eval_interval = 400
+        self.dropout = 0.15          # increased
+        self.learning_rate = 4e-4
+        self.max_iters = 10000
+        self.eval_interval = 500
         self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 config = Config()
 
-print(f"Training on: {config.device}")
-
-# ====================== DATA LOADER ======================
+# ====================== DATA ======================
 class CharDataset:
     def __init__(self, text, block_size):
         chars = sorted(list(set(text)))
@@ -30,11 +28,17 @@ class CharDataset:
         self.vocab_size = len(chars)
         self.block_size = block_size
         self.data = torch.tensor([self.stoi[c] for c in text], dtype=torch.long)
+        
+        # Split 90/10
+        n = int(0.9 * len(self.data))
+        self.train_data = self.data[:n]
+        self.val_data = self.data[n:]
 
-    def get_batch(self, batch_size):
-        ix = torch.randint(len(self.data) - self.block_size, (batch_size,))
-        x = torch.stack([self.data[i:i+self.block_size] for i in ix])
-        y = torch.stack([self.data[i+1:i+self.block_size+1] for i in ix])
+    def get_batch(self, split, batch_size):
+        data = self.train_data if split == 'train' else self.val_data
+        ix = torch.randint(len(data) - self.block_size, (batch_size,))
+        x = torch.stack([data[i:i+self.block_size] for i in ix])
+        y = torch.stack([data[i+1:i+self.block_size+1] for i in ix])
         return x.to(config.device), y.to(config.device)
 
 # ====================== MODEL ======================
@@ -89,9 +93,26 @@ class BabyGPT(nn.Module):
         loss = F.cross_entropy(logits.view(-1, logits.size(-1)), targets.view(-1))
         return logits, loss
 
-# ====================== MAIN TRAINING ======================
+# ====================== GENERATION ======================
+@torch.no_grad()
+def generate(model, dataset, prompt="", max_new_tokens=500):
+    model.eval()
+    idx = torch.tensor([dataset.stoi[c] for c in prompt], dtype=torch.long, device=config.device).unsqueeze(0)
+    if len(idx[0]) == 0:
+        idx = torch.zeros((1, 1), dtype=torch.long, device=config.device)
+    
+    for _ in range(max_new_tokens):
+        idx_cond = idx[:, -config.block_size:]
+        logits = model(idx_cond)
+        logits = logits[:, -1, :]
+        probs = F.softmax(logits, dim=-1)
+        idx_next = torch.multinomial(probs, num_samples=1)
+        idx = torch.cat((idx, idx_next), dim=1)
+    
+    return ''.join([dataset.itos[i] for i in idx[0].tolist()])
+
+# ====================== MAIN ======================
 def main():
-    # Load data
     with open('training.txt', 'r', encoding='utf-8') as f:
         text = f.read()
     
@@ -108,25 +129,22 @@ def main():
         if step % config.eval_interval == 0:
             model.eval()
             with torch.no_grad():
-                xb, yb = dataset.get_batch(8)
-                _, loss = model(xb, yb)
-                print(f"Step {step:4d} | val loss {loss.item():.4f}")
+                xb, yb = dataset.get_batch('val', batch_size=16)
+                _, val_loss = model(xb, yb)
+                print(f"Step {step:5d} | val loss {val_loss.item():.4f}")
             model.train()
 
-        xb, yb = dataset.get_batch(config.batch_size)
+        xb, yb = dataset.get_batch('train', config.batch_size)
         optimizer.zero_grad()
         _, loss = model(xb, yb)
         loss.backward()
         optimizer.step()
 
-    # Save model
-    torch.save({
-        'model_state_dict': model.state_dict(),
-        'config': config,
-        'vocab': (dataset.stoi, dataset.itos)
-    }, "babygpt_model.pt")
-    
-    print("\nTraining finished! Model saved as babygpt_model.pt")
+    # Final generation test
+    print("\n" + "="*60)
+    print("GENERATED TEXT:")
+    print("="*60)
+    print(generate(model, dataset, prompt="The sea ", max_new_tokens=800))
 
 if __name__ == "__main__":
     main()
