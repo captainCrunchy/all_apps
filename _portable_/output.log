@@ -1,30 +1,11 @@
-Vocabulary size: 108
-Train tokens: 1,752,912
-Val tokens: 194,768
-Model created with 4,860,012 parameters
-
-Step     0 | val loss 4.7624
-Step   500 | val loss 0.0138
-Step  1000 | val loss 0.0113
-Step  1500 | val loss 0.0115
-Step  2000 | val loss 0.0089
-Step  2500 | val loss 0.0087
-Step  3000 | val loss 0.0085
-Step  3500 | val loss 0.0098
-Step  4000 | val loss 0.0108
-Step  4500 | val loss 0.0101
-Step  5000 | val loss 0.0096
-Step  5500 | val loss 0.0077
-Step  6000 | val loss 0.0074
-Step  6500 | val loss 0.0080
-Step  7000 | val loss 0.0076
-Step  7500 | val loss 0.0054
-Step  8000 | val loss 0.0074
-Step  8500 | val loss 0.0054
-Step  9000 | val loss 0.0075
-Step  9500 | val loss 0.0079
-
-Best val loss: 0.0054
-
-=== Generated Text ===
-The sea a  e s   aee Th   e  e        e        e     e                                    e     e                                                     e                                  
+Download these books from Project Gutenberg (Plain Text UTF-8 version). Prioritize in this order:
+1.  Moby Dick – Herman Melville (you already have)
+2.  Pride and Prejudice – Jane Austen (you already have)
+3.  Frankenstein – Mary Shelley
+4.  The Adventures of Huckleberry Finn – Mark Twain
+5.  Alice’s Adventures in Wonderland – Lewis Carroll
+6.  Dracula – Bram Stoker
+7.  The Picture of Dorian Gray – Oscar Wilde
+8.  Sense and Sensibility – Jane Austen
+9.  Great Expectations – Charles Dickens
+10.  The Count of Monte Cristo – Alexandre Dumas (very long, excellent)
