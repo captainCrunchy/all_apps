@@ -1,38 +1,38 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import tiktoken
 
 # ====================== CONFIG ======================
 class Config:
     def __init__(self):
-        self.batch_size = 64
-        self.block_size = 256
-        self.n_embd = 384              # Decent size for 10 books
+        self.batch_size = 32
+        self.block_size = 512          # longer context
+        self.n_embd = 512
         self.n_head = 8
         self.n_layer = 8
-        self.dropout = 0.15
-        self.learning_rate = 4e-4
-        self.max_iters = 12000
+        self.dropout = 0.1
+        self.learning_rate = 3e-4
+        self.max_iters = 15000
         self.eval_interval = 500
         self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 config = Config()
 
-# ====================== DATASET ======================
-class CharDataset:
+# ====================== TOKENIZER & DATA ======================
+enc = tiktoken.get_encoding("gpt2")   # Use GPT-2 tokenizer (~50k vocab)
+
+class TextDataset:
     def __init__(self, text, block_size):
-        chars = sorted(list(set(text)))
-        self.stoi = {ch: i for i, ch in enumerate(chars)}
-        self.itos = {i: ch for i, ch in enumerate(chars)}
-        self.vocab_size = len(chars)
+        self.enc = enc
         self.block_size = block_size
+        self.tokens = torch.tensor(enc.encode(text), dtype=torch.long)
         
-        data = torch.tensor([self.stoi[c] for c in text], dtype=torch.long)
-        n = int(0.9 * len(data))
-        self.train_data = data[:n]
-        self.val_data = data[n:]
+        n = int(0.9 * len(self.tokens))
+        self.train_data = self.tokens[:n]
+        self.val_data = self.tokens[n:]
         
-        print(f"Vocabulary size: {self.vocab_size}")
+        print(f"Vocabulary size: {enc.n_vocab}")
         print(f"Train tokens: {len(self.train_data):,}")
         print(f"Val tokens: {len(self.val_data):,}")
 
@@ -43,7 +43,7 @@ class CharDataset:
         y = torch.stack([data[i+1:i+self.block_size+1] for i in ix])
         return x.to(config.device), y.to(config.device)
 
-# ====================== MODEL ======================
+# ====================== MODEL (same as before) ======================
 class GPTBlock(nn.Module):
     def __init__(self, config):
         super().__init__()
@@ -92,11 +92,11 @@ class BabyGPT(nn.Module):
         loss = F.cross_entropy(logits.view(-1, logits.size(-1)), targets.view(-1))
         return logits, loss
 
-# ====================== GENERATION ======================
+# Generation
 @torch.no_grad()
-def generate(model, dataset, prompt="The ", max_new_tokens=800, temperature=0.85):
+def generate(model, prompt="The ", max_new_tokens=600, temperature=0.85):
     model.eval()
-    idx = torch.tensor([dataset.stoi.get(c, 0) for c in prompt], dtype=torch.long, device=config.device).unsqueeze(0)
+    idx = torch.tensor(enc.encode(prompt), dtype=torch.long, device=config.device).unsqueeze(0)
     
     for _ in range(max_new_tokens):
         idx_cond = idx[:, -config.block_size:]
@@ -105,29 +105,26 @@ def generate(model, dataset, prompt="The ", max_new_tokens=800, temperature=0.85
         idx_next = torch.multinomial(probs, num_samples=1)
         idx = torch.cat((idx, idx_next), dim=1)
     
-    return ''.join([dataset.itos[i] for i in idx[0].tolist()])
+    return enc.decode(idx[0].tolist())
 
 # ====================== MAIN ======================
 def main():
     with open('training.txt', 'r', encoding='utf-8') as f:
         text = f.read()
     
-    dataset = CharDataset(text, config.block_size)
-    model = BabyGPT(dataset.vocab_size, config).to(config.device)
-    print(f"\nModel created with {sum(p.numel() for p in model.parameters()):,} parameters\n")
+    dataset = TextDataset(text, config.block_size)
+    model = BabyGPT(enc.n_vocab, config).to(config.device)
+    print(f"Model created with {sum(p.numel() for p in model.parameters()):,} parameters\n")
 
     optimizer = torch.optim.AdamW(model.parameters(), lr=config.learning_rate)
 
-    best_val = float('inf')
     for step in range(config.max_iters):
         if step % config.eval_interval == 0:
             model.eval()
             with torch.no_grad():
-                xb, yb = dataset.get_batch('val', 16)
+                xb, yb = dataset.get_batch('val', 8)
                 _, val_loss = model(xb, yb)
                 print(f"Step {step:5d} | val loss {val_loss.item():.4f}")
-                if val_loss < best_val:
-                    best_val = val_loss
             model.train()
 
         xb, yb = dataset.get_batch('train', config.batch_size)
@@ -136,13 +133,10 @@ def main():
         loss.backward()
         optimizer.step()
 
-    print(f"\nBest val loss: {best_val:.4f}")
-
-    print("\n" + "="*70)
-    print("GENERATED TEXT")
-    print("="*70)
-    print(generate(model, dataset, prompt="The captain ", max_new_tokens=800, temperature=0.8))
-    print(generate(model, dataset, prompt="She said ", max_new_tokens=600, temperature=0.75))
+    print("\n=== GENERATED SAMPLES ===")
+    print(generate(model, "The captain of the ship "))
+    print("\n" + "-"*50)
+    print(generate(model, "She looked at him and said "))
 
 if __name__ == "__main__":
     main()
